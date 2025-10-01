@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/raj-krr/to-do-list/issues"
   },
-  "homepage": "https://github.com/raj-krr/to-do-list#readme"
+  "homepage": "https://github.com/raj-krr/to-do-list#readme",
+  "dependencies": {
+    "express": "^5.1.0"
+  }
 }
