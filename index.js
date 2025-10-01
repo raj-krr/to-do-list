@@ -1,59 +1,95 @@
 const express = require("express");
-const bodyParser = require("body-parser");
+const users = require("./MOCK_DATA.json");
+const fs = require('fs');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 8000;
 
-// Middleware
-app.use(bodyParser.json());
+middleware 
+ app.use(express.urlencoded ({extended: false}));
+ app.use(express.json());
 
-// Temporary in-memory storage (for demo purposes)
-let todos = [];
 
-// Routes
-app.get("/", (req, res) => {
-  res.send("Welcome to the To-Do List API 🚀");
+//Routes
+
+app.get('/api/users',(req, res) =>{
+    return res.json(users);
 });
 
-// Get all todos
-app.get("/todos", (req, res) => {
-  res.json(todos);
+app.get("/api/users/:id",(req ,res)=>{
+    const id =Number( req.params.id);
+    const user = users.find((user)=> user.id === id);
+
+     if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+    return res.json(user);
+
 });
 
-// Add a new todo
-app.post("/todos", (req, res) => {
-  const { task } = req.body;
-  if (!task) return res.status(400).json({ error: "Task is required" });
+//updating 
+ app.patch("/api/users/:id", (req, res) => {
+  const id = Number(req.params.id);
+  const userIndex = users.findIndex((user) => user.id === id);
 
-  const newTodo = { id: todos.length + 1, task, completed: false };
-  todos.push(newTodo);
+  // If user not found
+  if (userIndex === -1) {
+    return res.status(404).json({ message: "User not found" });
+  }
 
-  res.status(201).json(newTodo);
+  // Merge existing user with new fields from request body
+  const updatedUser = { ...users[userIndex], ...req.body };
+  users[userIndex] = updatedUser;
+
+  // Save back to file
+  fs.writeFile("./MOCK_DATA.json", JSON.stringify(users, null, 2), (err) => {
+    if (err) {
+      return res.status(500).json({ message: "Error updating user" });
+    }
+    return res.json({ status: "success", user: updatedUser });
+  });
 });
 
-// Update a todo
-app.put("/todos/:id", (req, res) => {
-  const { id } = req.params;
-  const { task, completed } = req.body;
+//deleting user
+app.delete("/api/users/:id", (req, res) => {
+  const id = Number(req.params.id);
 
-  const todo = todos.find((t) => t.id == id);
-  if (!todo) return res.status(404).json({ error: "Todo not found" });
+  // Find the user by id
+  const userIndex = users.findIndex((user) => user.id === id);
 
-  if (task !== undefined) todo.task = task;
-  if (completed !== undefined) todo.completed = completed;
+  if (userIndex === -1) {
+    return res.status(404).json({ message: "User not found" });
+  }
 
-  res.json(todo);
+  // Remove the user from array
+  const deletedUser = users[userIndex];
+  const newUsers = users.filter((user) => user.id !== id);
+
+  // Save updated users back to file
+  fs.writeFile("./MOCK_DATA.json", JSON.stringify(newUsers, null, 2), (err) => {
+    if (err) {
+      return res.status(500).json({ message: "Error deleting user" });
+    }
+    return res.json({
+      status: "success",
+      message: `User ${id} deleted`,
+      deletedUser
+    });
+  });
 });
 
-// Delete a todo
-app.delete("/todos/:id", (req, res) => {
-  const { id } = req.params;
-  todos = todos.filter((t) => t.id != id);
-  res.json({ message: "Todo deleted" });
+//adding new users
+app.post("/api/users",(req, res)=>{
+    const body = req.body ;
+ console.log( "body",body);
+ if (!body.first_name || !body.last_name || !body.email) {
+    return res.status(400).json({ message: "Missing required fields" });
+  }
+ users.push({...body, id:users.length+1});
+   fs.writeFile("./MOCK_DATA.json",JSON.stringify(users),(err,data)=>{
+    return res.json({status :"success", id: users.length+1});
+ });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
 
+app.listen(PORT ,()=> console.log(`server is starting at port:${PORT} `));
